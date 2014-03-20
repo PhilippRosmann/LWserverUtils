@@ -8,11 +8,16 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 
 /**
  *
@@ -25,16 +30,20 @@ public abstract class HandleRequestServer
     private int port;
     private WaitForRequestsThread serverTh = null;
     private ExecutorService handleRequestWorkers = null;
+    private final Crypto crypto;
 
     public static synchronized void setLogLevel(Level newLevel) throws SecurityException
     {
         LOG.setLevel(newLevel);
     }
-    
-    public HandleRequestServer(int port)
+
+    public HandleRequestServer(int port, String key) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, IOException
     {
         this.port = port;
+        crypto = new Crypto(key);
     }
+    
+    
     
     public void startService() throws IllegalStateException, IOException
     {
@@ -131,7 +140,7 @@ public abstract class HandleRequestServer
         {
             try
             {
-                byte[] request = ConnectionUtils.receive(client);
+                byte[] request = crypto.receive(client.getInputStream());
                 
                 LOG.log(Level.INFO, 
                     "{1}: Received {0} Bytes", 
@@ -145,7 +154,7 @@ public abstract class HandleRequestServer
                     new Object[]{response.length, 
                         client.getInetAddress().getCanonicalHostName()});
                 
-                ConnectionUtils.send(client, response);
+                crypto.send(client.getOutputStream(), response);
             }
             catch (SocketTimeoutException ex)
             {
@@ -153,7 +162,11 @@ public abstract class HandleRequestServer
                     "Connection to {0} timed out", 
                     client.getInetAddress().getCanonicalHostName());
             }
-            catch (IOException ex)
+            catch (BadPaddingException | IllegalBlockSizeException ex)
+            {
+                LOG.warning("Couldn´t encrypt/decrypt data (wrong key ?)");
+            }
+            catch(IOException ex)
             {
                 LOG.severe(ex.getMessage());
             }

@@ -4,9 +4,6 @@
  */
 package com.github.philipprosmann.lwserverutils;
 
-import java.io.IOException;
-import java.net.UnknownHostException;
-
 /**
  *
  * @author Philipp
@@ -17,40 +14,35 @@ public class Testclass
     {
         final int port = 45689;
         
-        HandleRequestServer server = new HandleRequestServer(port)
+        try
         {
-
-            @Override
-            protected byte[] handleRequestReturnResponse(byte[] request)
+            HandleRequestServer server = new HandleRequestServer(port, "Test1234")
             {
-                return (new String(request) + " ADD Something").getBytes();
-            }
-        };
-        
-        
-        try
-        {
+                @Override
+                protected byte[] handleRequestReturnResponse(byte[] request)
+                {
+                    return (new String(request)+" Can´t touch thiz\n").getBytes();
+                }
+            };
+            
             server.startService();
-        } catch (IllegalStateException | IOException ex)
+            
+            try
+            {
+                System.out.println(new String(
+                    RequestClient.sendRequest("localhost", port, "Test:\n".getBytes(), "Test1234")));
+                
+            }
+            catch (Exception ex)
+            {
+                System.out.println(ex.getMessage());
+            }
+            
+            server.stopService();
+        }
+        catch(Exception ex)
         {
             System.out.println(ex.getMessage());
         }
-        
-        
-        try
-        {
-            System.out.println(new String(RequestClient.sendRequest("localhost", port, "Hallo Test".getBytes())));
-        }
-        catch (UnknownHostException ex)
-        {
-            System.out.println(ex.getMessage());
-        }
-        catch (IOException ex)
-        {
-            System.out.println(ex.getMessage());
-        }
-        
-        
-        server.stopService();
     }
 }

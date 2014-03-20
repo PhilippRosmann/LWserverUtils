@@ -9,8 +9,14 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-import java.util.logging.Level;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.logging.Logger;
+import javax.crypto.Cipher;
+import javax.crypto.CipherOutputStream;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.spec.SecretKeySpec;
 
 /**
  *
@@ -20,17 +26,14 @@ public class ConnectionUtils
 {
     private static final Logger LOG = Logger.getLogger(ConnectionUtils.class.getName());
     
-    
-    public static void send(Socket so, byte[] data) throws IOException
+    public static void send(OutputStream os, byte[] data) throws IOException
     {
-        OutputStream os = so.getOutputStream();
         os.write(data);
         os.flush();
     }
     
-    public static byte[] receive(Socket so) throws SocketTimeoutException,IOException
+    public static byte[] receive(InputStream is) throws SocketTimeoutException,IOException
     {
-        InputStream is = so.getInputStream();
         byte[] buffer = new byte[1000];
         byte[] resp;
         int read;
@@ -40,8 +43,16 @@ public class ConnectionUtils
         if(read==1000)
             LOG.warning("Receive-Buffer is full");
         
-        resp = new byte[read];
-        System.arraycopy(buffer, 0, resp, 0, read);
+        if(read == -1)
+            resp = new byte[0];
+        else
+        {
+            resp = new byte[read];
+            System.arraycopy(buffer, 0, resp, 0, read);
+        }
+        
         return resp;
     }
+    
+    
 }
